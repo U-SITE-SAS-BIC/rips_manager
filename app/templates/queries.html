@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Consultas SQL{% endblock %}
+{% block header %}Consultas SQL{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2 text-blue-500"></i>Mis Consultas</h3>
+                <button onclick="document.getElementById('modal-new-query').classList.remove('hidden')"
+                    class="text-blue-600 hover:text-blue-800"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="p-4 space-y-2">
+                {% for q in queries %}
+                <div class="p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer"
+                     onclick="editQuery({{ q.id }}, '{{ q.name }}', '{{ q.query_type }}', `{{ q.query_text|e }}`, `{{ q.description|e }}`)">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-sm text-gray-800">{{ q.name }}</span>
+                        <span class="px-2 py-0.5 rounded text-xs font-medium {% if q.query_type == 'terceros' %}bg-blue-100 text-blue-700{% else %}bg-purple-100 text-purple-700{% endif %}">
+                            {{ q.query_type }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 truncate">{{ q.description or 'Sin descripción' }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="font-semibold text-gray-800"><i class="fas fa-code mr-2 text-blue-500"></i>Editor SQL</h3>
+            </div>
+            <div class="p-6">
+                <form method="POST" action="/queries/create" class="space-y-4">
+                    <input type="hidden" name="query_id" id="query_id" value="">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <input type="text" name="name" id="q_name" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Nombre descriptivo">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <select name="query_type" id="q_type"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="terceros">Terceros (datos paciente)</option>
+                                <option value="transaccion">Transacción (procedimientos)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Consulta SQL</label>
+                        <textarea name="query_text" id="q_text" rows="10" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono bg-gray-50"
+                            placeholder="SELECT ... FROM ... WHERE ..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <input type="text" name="description" id="q_desc"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            placeholder="¿Qué hace esta consulta?">
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
+                            <i class="fas fa-save mr-1"></i> Guardar
+                        </button>
+                        <button type="button" onclick="cancelEdit()"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 hidden" id="btn-cancel">
+                            <i class="fas fa-times mr-1"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="mt-4 bg-blue-50 rounded-xl border border-blue-200 p-4">
+            <h4 class="text-sm font-medium text-blue-800"><i class="fas fa-info-circle mr-1"></i> Parámetros disponibles</h4>
+            <p class="text-xs text-blue-600 mt-1">
+                Usa <code class="bg-blue-100 px-1 rounded">:doc_num</code> para filtro por documento,
+                <code class="bg-blue-100 px-1 rounded">:factura</code> para filtro por factura,
+                <code class="bg-blue-100 px-1 rounded">:fecha_ini</code> y <code class="bg-blue-100 px-1 rounded">:fecha_fin</code> para rango de fechas.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function editQuery(id, name, type, text, desc) {
+    document.getElementById('query_id').value = id;
+    document.getElementById('q_name').value = name;
+    document.getElementById('q_type').value = type;
+    document.getElementById('q_text').value = text;
+    document.getElementById('q_desc').value = desc;
+    document.getElementById('btn-cancel').classList.remove('hidden');
+    document.querySelector('form').action = '/queries/update/' + id;
+}
+
+function cancelEdit() {
+    document.getElementById('query_id').value = '';
+    document.getElementById('q_name').value = '';
+    document.getElementById('q_text').value = '';
+    document.getElementById('q_desc').value = '';
+    document.getElementById('btn-cancel').classList.add('hidden');
+    document.querySelector('form').action = '/queries/create';
+}
+</script>
+{% endblock %}

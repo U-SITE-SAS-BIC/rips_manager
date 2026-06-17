@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-900">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                    <i class="fas fa-file-medical text-blue-600 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">RIPS Manager</h2>
+                <p class="text-sm text-gray-500 mt-1">Gestión de envío de RIPS</p>
+            </div>
+
+            {% if error %}
+            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i> {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/auth/login" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" name="username" required
+                            class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            placeholder="Ingresa tu usuario">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" name="password" required
+                            class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            placeholder="Ingresa tu contraseña">
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Iniciar Sesión
+                </button>
+            </form>
+            <p class="mt-4 text-center text-sm text-gray-500">
+                ¿No tienes cuenta? <a href="/auth/register" class="text-blue-600 hover:underline font-medium">Regístrate</a>
+            </p>
+        </div>
+        <p class="text-center text-white/70 text-xs mt-4">RIPS Manager v1.0 — Resolución 2275/2023</p>
+    </div>
+</div>
+{% endblock %}

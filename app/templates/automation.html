@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Automatización{% endblock %}
+{% block header %}Automatización Completa{% endblock %}
+{% block content %}
+<div class="max-w-4xl">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="font-semibold text-gray-800"><i class="fas fa-robot mr-2 text-blue-500"></i>Paso 1 + Paso 2 Automático</h3>
+            <p class="text-xs text-gray-500 mt-1">Selecciona las consultas y el rango de fechas. El sistema enviará primero los terceros y luego las transacciones RIPS automáticamente.</p>
+        </div>
+        <div class="p-6">
+            <form id="form-automation" class="space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
+                            <span class="ml-2 font-medium text-blue-800">Paso 1: Terceros</span>
+                        </div>
+                        <select name="query_terceros_id" required
+                            class="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm">
+                            <option value="">Seleccionar consulta...</option>
+                            {% for q in queries if q.query_type == 'terceros' %}
+                            <option value="{{ q.id }}">{{ q.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
+                            <span class="ml-2 font-medium text-purple-800">Paso 2: Transacción RIPS</span>
+                        </div>
+                        <select name="query_transaccion_id" required
+                            class="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm">
+                            <option value="">Seleccionar consulta...</option>
+                            {% for q in queries if q.query_type == 'transaccion' %}
+                            <option value="{{ q.id }}">{{ q.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+                        <input type="date" name="fecha_fin" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Factura <span class="text-xs text-gray-400">(opcional)</span></label>
+                        <input type="text" name="factura"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            placeholder="Filtrar por factura">
+                    </div>
+                </div>
+
+                <button type="button" onclick="runAutomation()"
+                    class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all flex items-center justify-center">
+                    <i class="fas fa-play mr-2"></i> Ejecutar Automatización Completa
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-section" class="mt-6 hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h4 class="font-semibold text-gray-800 mb-4"><i class="fas fa-spinner fa-spin mr-2 text-blue-500"></i>Progreso</h4>
+            <div class="space-y-4">
+                <div id="step1" class="p-4 rounded-lg border border-gray-200">
+                    <div class="flex items-center">
+                        <div id="step1-icon" class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm">1</div>
+                        <div class="ml-3">
+                            <p class="font-medium text-gray-800">Paso 1: Envío de Terceros</p>
+                            <p id="step1-msg" class="text-sm text-gray-500">Esperando...</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="step2" class="p-4 rounded-lg border border-gray-200">
+                    <div class="flex items-center">
+                        <div id="step2-icon" class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm">2</div>
+                        <div class="ml-3">
+                            <p class="font-medium text-gray-800">Paso 2: Envío de Transacciones</p>
+                            <p id="step2-msg" class="text-sm text-gray-500">Esperando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function runAutomation() {
+    if (!confirm('¿Ejecutar la automatización completa?\n\nPaso 1: Enviar terceros\nPaso 2: Enviar transacciones RIPS')) return;
+
+    const form = document.getElementById('form-automation');
+    const data = new FormData(form);
+    const btn = form.querySelector('button[onclick="runAutomation()"]');
+    showLoading(btn);
+
+    document.getElementById('progress-section').classList.remove('hidden');
+    updateStep('step1', 'processing', 'Enviando terceros...');
+
+    const resp = await fetch('/automation/run', {method:'POST', body: data, credentials: 'include'});
+    const result = await resp.json();
+    hideLoading(btn, '<i class="fas fa-play mr-2"></i> Ejecutar Automatización Completa');
+
+    if (result.success) {
+        const r = result.resultado;
+
+        if (r.paso1_terceros.status === 'success') {
+            updateStep('step1', 'success', `✅ ${r.paso1_terceros.enviados} terceros enviados`);
+        } else if (r.paso1_terceros.status === 'partial') {
+            updateStep('step1', 'warning', `⚠️ ${r.paso1_terceros.enviados} enviados, ${r.paso1_terceros.errores} errores`);
+        } else {
+            updateStep('step1', 'error', `❌ ${r.paso1_terceros.message || 'Error'}`);
+        }
+
+        if (r.paso2_transaccion.status === 'success') {
+            updateStep('step2', 'success', `✅ ${r.paso2_transaccion.enviados} transacciones enviadas`);
+        } else if (r.paso2_transaccion.status === 'partial') {
+            updateStep('step2', 'warning', `⚠️ ${r.paso2_transaccion.enviados} enviados, ${r.paso2_transaccion.errores} errores`);
+        } else {
+            updateStep('step2', 'error', `❌ ${r.paso2_transaccion.message || 'Error'}`);
+        }
+
+        showToast('Automatización completada', 'success');
+    } else {
+        updateStep('step1', 'error', 'Error en la automatización');
+        showToast('Error en la automatización', 'error');
+    }
+}
+
+function updateStep(id, status, msg) {
+    const step = document.getElementById(id);
+    const icon = document.getElementById(id + '-icon');
+    const msgEl = document.getElementById(id + '-msg');
+
+    const icons = {
+        processing: '<i class="fas fa-spinner fa-spin text-blue-500"></i>',
+        success: '<i class="fas fa-check text-green-500"></i>',
+        warning: '<i class="fas fa-exclamation-triangle text-yellow-500"></i>',
+        error: '<i class="fas fa-times text-red-500"></i>',
+    };
+
+    const borders = {
+        processing: 'border-blue-300 bg-blue-50',
+        success: 'border-green-300 bg-green-50',
+        warning: 'border-yellow-300 bg-yellow-50',
+        error: 'border-red-300 bg-red-50',
+    };
+
+    icon.innerHTML = icons[status] || '1';
+    step.className = `p-4 rounded-lg border ${borders[status] || 'border-gray-200'}`;
+    msgEl.textContent = msg;
+}
+</script>
+{% endblock %}
