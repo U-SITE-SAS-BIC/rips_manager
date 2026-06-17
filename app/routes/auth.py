@@ -68,7 +68,7 @@ async def login(
 
         token = create_token(user["id"], user["username"])
         resp = RedirectResponse("/dashboard", status_code=302)
-        resp.set_cookie(key="token", value=token, httponly=True, max_age=43200)
+        resp.set_cookie(key="token", value=token, httponly=True)
         return resp
     finally:
         conn.close()

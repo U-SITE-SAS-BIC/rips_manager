@@ -92,4 +92,12 @@ app.include_router(automation.router)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    import socket
+    hostname = socket.gethostname()
+    try:
+        lan_ip = socket.gethostbyname(hostname)
+    except:
+        lan_ip = "0.0.0.0"
+    print(f"  Local: http://localhost:8080")
+    print(f"  Red:   http://{lan_ip}:8080")
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=False)

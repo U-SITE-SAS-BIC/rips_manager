@@ -23,7 +23,6 @@ def create_token(user_id: int, username: str) -> str:
     payload = {
         "user_id": user_id,
         "username": username,
-        "exp": datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
