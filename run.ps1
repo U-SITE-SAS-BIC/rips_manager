@@ -6,18 +6,17 @@ if (-not $python) {
     Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe" -OutFile "$env:TEMP\python-installer.exe"
     Write-Host "Instalando Python..."
     Start-Process -Wait -FilePath "$env:TEMP\python-installer.exe" -ArgumentList "/quiet InstallAllUsers=0 PrependPath=1 Include_test=0"
-    Write-Host "Python instalado. Cerrá y abrí PowerShell de nuevo, o ejecutá este script otra vez."
+    Write-Host "Python instalado. Cerra y abri PowerShell de nuevo."
     Read-Host "Enter para salir"
     exit
 }
 
-Write-Host "Pull inicial..."
-git pull
+Write-Host "Instalando dependencias..."
 python -m pip install -q -r requirements.txt
 
 Write-Host "`n=========================================="
 Write-Host " Servidor: http://localhost:8080"
-Write-Host " Auto-update cada 60 segundos"
-Write-Host "=========================================="
+Write-Host " Presiona Ctrl+C para detener"
+Write-Host "==========================================`n"
 
-python auto_update.py
+python main.py
