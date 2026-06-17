@@ -13,22 +13,19 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: Obtener carpeta de Python
-for /f "delims=" %%i in ('where python') do set PY_DIR=%%~dpi
-
 :: Instalar dependencias
-"%PY_DIR%python" -m pip install -q -r requirements.txt
+python -m pip install -q -r requirements.txt
 
 :: Matar instancia anterior
-taskkill /f /im pythonw.exe 2>nul
+taskkill /f /im python.exe 2>nul
 
-:: Iniciar sin ventana
-start "" "%PY_DIR%pythonw" "%~dp0main.py"
+:: Iniciar minimizado
+start /min python main.py
 
 echo ==========================================
-echo  RIPS Manager iniciado en segundo plano
+echo  RIPS Manager iniciado (minimizado)
 echo  http://localhost:8080
 echo  Para detener: doble clic en stop.bat
 echo ==========================================
-timeout /t 4 /nobreak >nul
+timeout /t 3 /nobreak >nul
 exit
