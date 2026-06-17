@@ -1,48 +1,30 @@
 @echo off
 chcp 65001 >nul
-title RIPS Manager - Iniciando...
 
-:: Verificar si ya existe Python portable
-if exist python\python.exe goto :start
-
-echo ==========================================
-echo  Descargando Python portable...
-echo ==========================================
-echo.
-
-:: Descargar Python embeddable (64-bit)
-powershell -Command "& {Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.9/python-3.12.9-embed-amd64.zip' -OutFile 'python.zip'}"
-
-if not exist python.zip (
-    echo ERROR: No se pudo descargar Python
+:: Verificar Python
+where python >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Descargando Python...
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe' -OutFile '%TEMP%\python-installer.exe'}"
+    start /wait "" "%TEMP%\python-installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
+    echo Python instalado. Ejecuta de nuevo el .bat
     pause
     exit /b
 )
 
-echo.
-echo Extrayendo...
-powershell -Command "& {Expand-Archive -Path 'python.zip' -DestinationPath 'python' -Force}"
-del python.zip
+:: Instalar dependencias
+python -m pip install -q -r requirements.txt
 
-:: Habilitar pip (descomentar línea en el archivo de configuración)
-set PYTHON_EXE=%~dp0python\python.exe
-set PTH_FILE=%~dp0python\python312._pth
-powershell -Command "& {(Get-Content '%PTH_FILE%') -replace '#import site','import site' | Set-Content '%PTH_FILE%'}"
+:: Matar instancia anterior si existe
+taskkill /f /im python.exe 2>nul
+taskkill /f /im pythonw.exe 2>nul
 
-:: Instalar pip
-echo.
-echo Instalando pip...
-%PYTHON_EXE% -c "import urllib.request; exec(urllib.request.urlopen('https://bootstrap.pypa.io/get-pip.py').read())"
+:: Iniciar sin ventana
+start /b pythonw main.py
 
-:start
-echo.
-echo Instalando dependencias...
-python\python.exe -m pip install -q -r requirements.txt 2>nul
-
-echo.
 echo ==========================================
-echo  Servidor iniciado en http://localhost:8080
-echo  Presiona Ctrl+C para detener
+echo  RIPS Manager iniciado en segundo plano
+echo  http://localhost:8080
 echo ==========================================
-python\python.exe main.py
-pause
+timeout /t 5 /nobreak >nul
+exit
