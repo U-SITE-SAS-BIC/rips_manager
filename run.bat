@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+cd /d "%~dp0"
 
 :: Verificar Python
 where python >nul 2>&1
@@ -12,19 +13,22 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: Instalar dependencias
-python -m pip install -q -r requirements.txt
+:: Obtener carpeta de Python
+for /f "delims=" %%i in ('where python') do set PY_DIR=%%~dpi
 
-:: Matar instancia anterior si existe
-taskkill /f /im python.exe 2>nul
+:: Instalar dependencias
+"%PY_DIR%python" -m pip install -q -r requirements.txt
+
+:: Matar instancia anterior
 taskkill /f /im pythonw.exe 2>nul
 
 :: Iniciar sin ventana
-start /b pythonw main.py
+start "" "%PY_DIR%pythonw" "%~dp0main.py"
 
 echo ==========================================
 echo  RIPS Manager iniciado en segundo plano
 echo  http://localhost:8080
+echo  Para detener: doble clic en stop.bat
 echo ==========================================
-timeout /t 5 /nobreak >nul
+timeout /t 4 /nobreak >nul
 exit
