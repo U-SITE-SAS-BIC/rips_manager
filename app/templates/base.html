@@ -94,6 +94,11 @@
     </div>
 
     <script>
+        console.log('%c RIPS Manager v1.0 ', 'background:#1e3a8a;color:white;font-size:18px;font-weight:bold;padding:8px 12px;border-radius:4px;');
+        console.log('%c Desarrollado por U-SITE SAS BIC', 'font-size:14px;');
+        console.log('%c https://u-site.app/', 'color:#2563eb;font-size:12px;');
+        console.log('%c Sistema de generacion y envio de RIPS (Res. 2275/2023)', 'font-style:italic;font-size:12px;');
+
         async function fetchJSON(url, options = {}) {
             const resp = await fetch(url, options);
             return await resp.json();
