@@ -371,7 +371,9 @@ async function ejecutar() {
         html += '</tbody></table>';
         resultDiv.innerHTML = html;
         ultimosRows = data.rows;
-        document.getElementById('btn-download').classList.replace('hidden', 'flex');
+        const btnDl = document.getElementById('btn-download');
+        btnDl.classList.remove('hidden');
+        btnDl.style.display = 'inline-flex';
 
         const shown = Math.min(data.total, 200);
         const trunc = data.total > 200 ? ` <span class="text-yellow-600 font-medium">(truncado a 200)</span>` : '';
@@ -391,7 +393,9 @@ function limpiar() {
     document.getElementById('result-table').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-300 select-none"><i class="fas fa-table text-4xl mb-3"></i><p class="text-sm">Ejecutá una consulta para ver resultados</p></div>';
     document.getElementById('result-info').textContent = '';
     document.getElementById('status-bar').innerHTML = '';
-    document.getElementById('btn-download').classList.replace('flex', 'hidden');
+    const btnDl2 = document.getElementById('btn-download');
+    btnDl2.classList.add('hidden');
+    btnDl2.style.display = '';
     ultimosRows = [];
 }
 
