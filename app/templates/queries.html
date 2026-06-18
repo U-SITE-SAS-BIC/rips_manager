@@ -247,27 +247,43 @@ function renderSchemaTree(tablas) {
         const key = t.tabla.replace(/\W/g, '_');
         const wrap = document.createElement('div');
         wrap.className = 'mb-0.5';
-        wrap.innerHTML = `
-            <div class="schema-table-row flex items-center gap-1 px-2 py-1 rounded cursor-pointer group select-none"
-                 onclick="toggleCols('${key}')">
-                <i id="chev-${key}" class="fas fa-chevron-right text-gray-300 text-xs transition-transform duration-150" style="width:10px"></i>
-                <i class="fas fa-table text-blue-400 text-xs"></i>
-                <span class="font-semibold text-gray-700 flex-1 text-xs">${t.tabla}</span>
-                <span class="text-gray-300 text-xs">${t.columnas.length}</span>
-                <button onclick="event.stopPropagation();selectAll('${t.tabla}',${JSON.stringify(t.columnas.map(c=>c.nombre))})"
-                    title="SELECT *" class="hidden group-hover:inline text-blue-400 hover:text-blue-600 text-xs ml-0.5">
-                    <i class="fas fa-code"></i>
-                </button>
-            </div>
-            <div id="cols-${key}" class="hidden ml-4 border-l border-gray-200 pl-2">
-                ${t.columnas.map(c => `
-                    <div class="schema-col flex items-center gap-1 px-1 py-0.5 rounded cursor-pointer text-xs"
-                         onclick="insertarTexto('${c.nombre}')" title="Insertar ${c.nombre}">
-                        <i class="fas fa-columns text-gray-300" style="font-size:9px;width:10px"></i>
-                        <span class="text-gray-700 flex-1">${c.nombre}</span>
-                        <span class="text-gray-400" style="font-size:10px">${c.tipo}</span>
-                    </div>`).join('')}
-            </div>`;
+
+        // fila de la tabla
+        const row = document.createElement('div');
+        row.className = 'schema-table-row flex items-center gap-1 px-2 py-1 rounded cursor-pointer group select-none';
+        row.innerHTML = `
+            <i id="chev-${key}" class="fas fa-chevron-right text-gray-300 text-xs transition-transform duration-150" style="width:10px"></i>
+            <i class="fas fa-table text-blue-400 text-xs"></i>
+            <span class="font-semibold text-gray-700 flex-1 text-xs">${t.tabla}</span>
+            <span class="text-gray-300 text-xs">${t.columnas.length}</span>`;
+        row.addEventListener('click', () => toggleCols(key));
+
+        // botón SELECT * — sin JSON en atributo
+        const btnSelect = document.createElement('button');
+        btnSelect.title = 'SELECT *';
+        btnSelect.className = 'hidden group-hover:inline text-blue-400 hover:text-blue-600 text-xs ml-0.5';
+        btnSelect.innerHTML = '<i class="fas fa-code"></i>';
+        btnSelect.addEventListener('click', e => { e.stopPropagation(); selectAll(t.tabla); });
+        row.appendChild(btnSelect);
+
+        // columnas
+        const colsDiv = document.createElement('div');
+        colsDiv.id = 'cols-' + key;
+        colsDiv.className = 'hidden ml-4 border-l border-gray-200 pl-2';
+        t.columnas.forEach(c => {
+            const colRow = document.createElement('div');
+            colRow.className = 'schema-col flex items-center gap-1 px-1 py-0.5 rounded cursor-pointer text-xs';
+            colRow.title = `Insertar ${c.nombre}`;
+            colRow.innerHTML = `
+                <i class="fas fa-columns text-gray-300" style="font-size:9px;width:10px"></i>
+                <span class="text-gray-700 flex-1">${c.nombre}</span>
+                <span class="text-gray-400" style="font-size:10px">${c.tipo}</span>`;
+            colRow.addEventListener('click', () => insertarTexto(c.nombre));
+            colsDiv.appendChild(colRow);
+        });
+
+        wrap.appendChild(row);
+        wrap.appendChild(colsDiv);
         tree.appendChild(wrap);
     });
 }
@@ -286,8 +302,10 @@ function insertarTexto(texto) {
     editor.focus();
 }
 
-function selectAll(tabla, columnas) {
-    const cols = columnas.map(c => `    ${c}`).join(',\n');
+function selectAll(tabla) {
+    const t = esquema.find(e => e.tabla === tabla);
+    if (!t) return;
+    const cols = t.columnas.map(c => `    ${c.nombre}`).join(',\n');
     const sql = `SELECT\n${cols}\nFROM ${tabla}\nROWS 50`;
     editor.setValue(sql);
     editor.focus();
