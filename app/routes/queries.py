@@ -148,34 +148,30 @@ async def run_sql(
     sql: str = Form(...),
     user: dict = Depends(get_current_user),
 ):
-    from app.services.firebird_service import FirebirdService, get_firebird_from_config
-    conn = get_connection()
-    configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
-    conn.close()
+    from app.services.firebird_service import get_firebird_from_config
+    try:
+        conn = get_connection()
+        configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
+        conn.close()
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
-    if not fb_success:
-        return JSONResponse({"error": f"Error Firebird: {fb_msg}"})
+        fb, fb_success, fb_msg = get_firebird_from_config(configs)
+        if not fb_success:
+            return JSONResponse({"error": f"Error Firebird: {fb_msg}"})
 
-    success, fb_err, rows = fb.execute_query(sql)
-    fb.disconnect()
+        success, fb_err, rows = fb.execute_query(sql)
+        fb.disconnect()
 
-    if not success:
-        return JSONResponse({"error": fb_err})
+        if not success:
+            return JSONResponse({"error": fb_err})
 
-    limit = rows[:200] if rows else []
-    return JSONResponse({
-        "rows": limit,
-        "total": len(rows),
-        "columns": list(limit[0].keys()) if limit else []
-    })
+        limit = rows[:200] if rows else []
+        return JSONResponse({
+            "rows": limit,
+            "total": len(rows),
+            "columns": list(limit[0].keys()) if limit else []
+        })
+    except Exception as e:
+        return JSONResponse({"error": f"Error interno: {e}"}, status_code=500)
 
 
 @router.post("/delete/{query_id}")
@@ -189,19 +185,12 @@ async def query_delete(query_id: int, user: dict = Depends(get_current_user)):
 
 @router.post("/esquema")
 async def obtener_esquema(user: dict = Depends(get_current_user)):
-    from app.services.firebird_service import FirebirdService, get_firebird_from_config
+    from app.services.firebird_service import get_firebird_from_config
     conn = get_connection()
     configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
     conn.close()
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
+    fb, fb_success, fb_msg = get_firebird_from_config(configs)
     if not fb_success:
         return JSONResponse({"error": f"Error Firebird: {fb_msg}"}, status_code=400)
 
@@ -250,19 +239,12 @@ async def obtener_esquema(user: dict = Depends(get_current_user)):
 
 @router.post("/tablas")
 async def listar_tablas(user: dict = Depends(get_current_user)):
-    from app.services.firebird_service import FirebirdService, get_firebird_from_config
+    from app.services.firebird_service import get_firebird_from_config
     conn = get_connection()
     configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
     conn.close()
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
+    fb, fb_success, fb_msg = get_firebird_from_config(configs)
     if not fb_success:
         return JSONResponse({"error": f"Error Firebird: {fb_msg}"}, status_code=400)
 
@@ -289,7 +271,7 @@ async def query_test(
     query_id: int = Form(...),
     user: dict = Depends(get_current_user),
 ):
-    from app.services.firebird_service import FirebirdService, get_firebird_from_config
+    from app.services.firebird_service import get_firebird_from_config
 
     conn = get_connection()
     q = conn.execute("SELECT * FROM queries WHERE id = ?", (query_id,)).fetchone()
@@ -299,14 +281,7 @@ async def query_test(
     if not q:
         return JSONResponse({"error": "Consulta no encontrada"}, status_code=404)
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
+    fb, fb_success, fb_msg = get_firebird_from_config(configs)
     if not fb_success:
         return JSONResponse({"error": f"Error Firebird: {fb_msg}"}, status_code=400)
 

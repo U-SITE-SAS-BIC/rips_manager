@@ -5,11 +5,19 @@ from typing import Optional
 
 
 def _safe(v):
-    if isinstance(v, (datetime.date, datetime.datetime)):
+    if v is None:
+        return None
+    if isinstance(v, datetime.datetime):
+        return v.isoformat()
+    if isinstance(v, datetime.date):
         return v.isoformat()
     if isinstance(v, decimal.Decimal):
         return float(v)
-    return v
+    if isinstance(v, (bytes, bytearray, memoryview)):
+        return f"<BLOB {len(v)} bytes>"
+    if isinstance(v, (int, float, str, bool)):
+        return v
+    return str(v)
 
 
 class FirebirdService:
@@ -65,11 +73,18 @@ class FirebirdService:
             return False, str(e), []
 
 
+def _port(val, default=3050) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def get_firebird_from_config(configs: dict) -> tuple:
     fb = FirebirdService()
     ok, msg = fb.connect(
         configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
+        _port(configs.get("firebird_port"), 3050),
         configs.get("firebird_database", ""),
         configs.get("firebird_user", "SYSDBA"),
         configs.get("firebird_password", "masterkey"),
