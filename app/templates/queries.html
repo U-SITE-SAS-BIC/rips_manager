@@ -107,7 +107,7 @@
             <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-100">
                 <span class="text-xs text-gray-500 font-mono" id="editor-label">SQL</span>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-400">Ctrl+Enter para ejecutar · Ctrl+Space autocomplete</span>
+                    <span class="text-xs text-gray-400">Ctrl+Enter para ejecutar</span>
                     <button onclick="limpiar()" class="text-xs text-gray-400 hover:text-gray-600"><i class="fas fa-eraser"></i></button>
                 </div>
             </div>
@@ -170,13 +170,17 @@ document.addEventListener('DOMContentLoaded', () => {
         tabSize: 4,
         indentWithTabs: false,
         lineWrapping: true,
-        extraKeys: {
-            'Ctrl-Space': 'autocomplete',
-            'Cmd-Space': 'autocomplete',
-        },
-        hintOptions: { tables: {} }
+        hintOptions: { tables: {}, completeSingle: false }
     });
     editor.setSize(null, 180);
+
+    // autocomplete al escribir
+    editor.on('inputRead', (cm, event) => {
+        if (event.origin === '+input' && event.text[0] && /[\w.]/.test(event.text[0])) {
+            cm.showHint({ completeSingle: false });
+        }
+    });
+
     editor.on('keydown', (cm, e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
