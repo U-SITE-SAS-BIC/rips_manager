@@ -4,25 +4,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from app.database import init_db
 from app.auth import decode_token
 
 app = FastAPI(title="RIPS Manager", version="1.0.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 templates = Jinja2Templates(
     directory=os.path.join(os.path.dirname(__file__), "app", "templates")
@@ -31,8 +21,7 @@ app.state.templates = templates
 
 
 def get_user_from_request(request: Request):
-    cookies = dict(request.cookies)
-    token = cookies.get("token")
+    token = request.cookies.get("token")
     if not token:
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
@@ -47,21 +36,15 @@ def get_user_from_request(request: Request):
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    public_paths = ["/auth/login", "/auth/register", "/auth/api/login"]
-    if request.url.path in public_paths or request.url.path.startswith("/static"):
-        return await call_next(request)
-
-    if request.url.path.startswith("/auth"):
+    if request.url.path.startswith("/auth") or request.url.path.startswith("/static"):
         return await call_next(request)
 
     user = get_user_from_request(request)
-    print(f"  [AUTH] path={request.url.path} user={user['username'] if user else None} cookies={dict(request.cookies)}", flush=True)
+    print(f"  [AUTH] path={request.url.path} user={user['username'] if user else None}", flush=True)
     if not user:
         if request.url.path.startswith("/api/"):
             from fastapi.responses import JSONResponse
-            print(f"  [AUTH] -> 401 JSON for /api/ path", flush=True)
             return JSONResponse({"detail": "Not authenticated"}, status_code=401)
-        print(f"  [AUTH] -> 307 redirect to /auth/login", flush=True)
         return RedirectResponse(url="/auth/login")
 
     request.state.user = user
@@ -71,6 +54,10 @@ async def auth_middleware(request: Request, call_next):
 @app.on_event("startup")
 async def startup():
     init_db()
+    from app.routes.config import ensure_defaults as config_defaults
+    from app.routes.queries import ensure_defaults as query_defaults
+    config_defaults()
+    query_defaults()
 
 
 @app.get("/")
@@ -78,7 +65,6 @@ async def root():
     return RedirectResponse(url="/dashboard")
 
 
-# Register routes
 from app.routes import auth, dashboard, config, queries, terceros, transaccion, logs, automation
 
 app.include_router(auth.router)
@@ -96,7 +82,7 @@ if __name__ == "__main__":
     hostname = socket.gethostname()
     try:
         lan_ip = socket.gethostbyname(hostname)
-    except:
+    except Exception:
         lan_ip = "0.0.0.0"
     print(f"  Local: http://localhost:8080")
     print(f"  Red:   http://{lan_ip}:8080")

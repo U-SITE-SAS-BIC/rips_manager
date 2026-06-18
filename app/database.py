@@ -39,19 +39,6 @@ def init_db():
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
-        CREATE TABLE IF NOT EXISTS logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            action TEXT NOT NULL,
-            step TEXT,
-            status TEXT NOT NULL CHECK(status IN ('success','error')),
-            payload TEXT,
-            response TEXT,
-            error_message TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-
         CREATE TABLE IF NOT EXISTS envios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,

@@ -1,11 +1,21 @@
+import json
+import httpx
+from datetime import datetime
 from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from app.database import get_connection
 from app.auth import get_current_user
-from app.services.firebird_service import FirebirdService
+from app.services.firebird_service import get_firebird_from_config
 from app.services.json_generator import generar_terceros
 
 router = APIRouter(prefix="/terceros", tags=["terceros"])
+
+
+def _load_configs() -> dict:
+    conn = get_connection()
+    configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
+    conn.close()
+    return configs
 
 
 @router.get("")
@@ -41,6 +51,7 @@ async def test_connection(
     fb_user: str = Form(...),
     fb_password: str = Form(...),
 ):
+    from app.services.firebird_service import FirebirdService
     fb = FirebirdService()
     success, msg = fb.connect(host, port, database, fb_user, fb_password)
     if success:
@@ -63,16 +74,9 @@ async def preview_query(
     if not q:
         return JSONResponse({"success": False, "message": "Consulta no encontrada"})
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
-    if not fb_success:
-        return JSONResponse({"success": False, "message": f"Error Firebird: {fb_msg}"})
+    fb, ok, msg = get_firebird_from_config(configs)
+    if not ok:
+        return JSONResponse({"success": False, "message": f"Error Firebird: {msg}"})
 
     params = {}
     if ":doc_num" in q["query_text"] and doc_num:
@@ -89,9 +93,7 @@ async def preview_query(
     if not success:
         return JSONResponse({"success": False, "message": error})
 
-    json_result = None
-    if rows:
-        json_result = generar_terceros(rows[0])
+    json_result = generar_terceros(rows[0]) if rows else None
 
     return JSONResponse({
         "success": True,
@@ -109,10 +111,6 @@ async def send_terceros(
     query_id: int = Form(...),
     doc_num: str = Form(""),
 ):
-    import json
-    import httpx
-    from datetime import datetime
-
     conn = get_connection()
     q = conn.execute("SELECT * FROM queries WHERE id = ?", (query_id,)).fetchone()
     configs = {row["key"]: row["value"] for row in conn.execute("SELECT * FROM config").fetchall()}
@@ -121,16 +119,9 @@ async def send_terceros(
     if not q:
         return JSONResponse({"success": False, "message": "Consulta no encontrada"})
 
-    fb = FirebirdService()
-    fb_success, fb_msg = fb.connect(
-        configs.get("firebird_host", "localhost"),
-        int(configs.get("firebird_port", 3050)),
-        configs.get("firebird_database", ""),
-        configs.get("firebird_user", "SYSDBA"),
-        configs.get("firebird_password", "masterkey"),
-    )
-    if not fb_success:
-        return JSONResponse({"success": False, "message": f"Error Firebird: {fb_msg}"})
+    fb, ok, msg = get_firebird_from_config(configs)
+    if not ok:
+        return JSONResponse({"success": False, "message": f"Error Firebird: {msg}"})
 
     params = {}
     if ":doc_num" in q["query_text"]:
@@ -141,51 +132,50 @@ async def send_terceros(
 
     if not success:
         return JSONResponse({"success": False, "message": error})
-
     if not rows:
         return JSONResponse({"success": False, "message": "No se encontraron datos"})
 
-    # Generar JSON terceros
     tercero_json = generar_terceros(rows[0])
 
-    # Enviar a API
     api_url = configs.get("api_url", "")
     api_key = configs.get("api_key", "")
     api_method = configs.get("api_method", "POST")
-
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
+    resp_ok = False
+    resp_text = ""
+    resp_code = 0
     try:
         async with httpx.AsyncClient(timeout=int(configs.get("api_timeout", 30))) as client:
             if api_method == "POST":
                 resp = await client.post(api_url + "/terceros", json=tercero_json, headers=headers)
             else:
                 resp = await client.put(api_url + "/terceros", json=tercero_json, headers=headers)
-
-        result = resp.status_code, resp.is_success, resp.text
+        resp_ok = resp.is_success
+        resp_text = resp.text
+        resp_code = resp.status_code
     except Exception as e:
-        result = (0, False, str(e))
+        resp_text = str(e)
 
-    # Guardar log
     conn = get_connection()
     conn.execute("""
         INSERT INTO envios (user_id, tipo, status, json_enviado, respuesta_api, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (
         user["user_id"], "terceros",
-        "success" if result[1] else "error",
+        "success" if resp_ok else "error",
         json.dumps(tercero_json, indent=2, ensure_ascii=False),
-        str(result[2])[:1000],
+        resp_text[:1000],
         datetime.now().isoformat(),
     ))
     conn.commit()
     conn.close()
 
     return JSONResponse({
-        "success": result[1],
-        "status_code": result[0],
-        "message": "Envío exitoso" if result[1] else f"Error: {result[2]}",
-        "cuv": result[2][:200] if result[1] else None,
+        "success": resp_ok,
+        "status_code": resp_code,
+        "message": "Envío exitoso" if resp_ok else f"Error: {resp_text}",
+        "cuv": resp_text[:200] if resp_ok else None,
     })

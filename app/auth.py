@@ -1,10 +1,13 @@
+import os
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET_KEY = "rips-manager-secret-key-change-in-production"
+# ponytail: fallback inseguro — set RIPS_SECRET_KEY en producción
+SECRET_KEY = os.environ.get("RIPS_SECRET_KEY", "rips-manager-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 12
 
@@ -23,11 +26,10 @@ def create_token(user_id: int, username: str) -> str:
     payload = {
         "user_id": user_id,
         "username": username,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-
-from typing import Optional
 
 def decode_token(token: str) -> Optional[dict]:
     try:
@@ -37,23 +39,14 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-from fastapi import Request
-
-
 def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     if hasattr(request.state, "user") and request.state.user:
         return request.state.user
     if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(credentials.credentials)
     if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return payload
 
 

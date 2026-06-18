@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
@@ -47,6 +48,16 @@ def generar_procedimiento(row: dict, consecutivo: int) -> dict:
         "codComplicacion": row.get("cod_complicacion", None),
         "numFEVPagoModerador": row.get("num_fev_pago_moderador", None),
     }
+
+
+def agrupar_por_factura(rows: list, factura_default: str = "") -> dict:
+    grupos = defaultdict(lambda: {"factura": "", "procedimientos": []})
+    for row in rows:
+        doc_key = (row.get("tipo_doc_paciente", "CC"), row.get("num_doc_paciente", ""))
+        fact = row.get("num_factura", factura_default)
+        grupos[(fact, doc_key)]["factura"] = fact
+        grupos[(fact, doc_key)]["procedimientos"].append(dict(row))
+    return grupos
 
 
 def generar_transaccion(

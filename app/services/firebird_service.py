@@ -44,7 +44,7 @@ class FirebirdService:
             return False, "No hay conexión activa", []
         try:
             cur = self.conn.cursor()
-            if params:
+            if params is not None:
                 cur.execute(query, params)
             else:
                 cur.execute(query)
@@ -53,3 +53,15 @@ class FirebirdService:
             return True, "", [dict(zip(columns, row)) for row in rows]
         except Exception as e:
             return False, str(e), []
+
+
+def get_firebird_from_config(configs: dict) -> tuple:
+    fb = FirebirdService()
+    ok, msg = fb.connect(
+        configs.get("firebird_host", "localhost"),
+        int(configs.get("firebird_port", 3050)),
+        configs.get("firebird_database", ""),
+        configs.get("firebird_user", "SYSDBA"),
+        configs.get("firebird_password", "masterkey"),
+    )
+    return fb, ok, msg

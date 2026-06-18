@@ -32,7 +32,6 @@ def ensure_defaults():
 
 @router.get("")
 async def config_page(request: Request, user: dict = Depends(get_current_user)):
-    ensure_defaults()
     conn = get_connection()
     configs = conn.execute("SELECT * FROM config ORDER BY key").fetchall()
     conn.close()
