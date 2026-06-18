@@ -1,5 +1,15 @@
 import fdb
+import datetime
+import decimal
 from typing import Optional
+
+
+def _safe(v):
+    if isinstance(v, (datetime.date, datetime.datetime)):
+        return v.isoformat()
+    if isinstance(v, decimal.Decimal):
+        return float(v)
+    return v
 
 
 class FirebirdService:
@@ -50,7 +60,7 @@ class FirebirdService:
                 cur.execute(query)
             columns = [desc[0] for desc in cur.description] if cur.description else []
             rows = cur.fetchall()
-            return True, "", [dict(zip(columns, row)) for row in rows]
+            return True, "", [{c: _safe(v) for c, v in zip(columns, row)} for row in rows]
         except Exception as e:
             return False, str(e), []
 
