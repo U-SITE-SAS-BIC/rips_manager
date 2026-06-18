@@ -12,15 +12,19 @@
             </div>
             <div class="p-4 space-y-2">
                 {% for q in queries %}
-                <div class="p-3 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer"
-                     onclick="editQuery({{ q.id }}, '{{ q.name }}', '{{ q.query_type }}', `{{ q.query_text|e }}`, `{{ q.description|e }}`)">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium text-sm text-gray-800">{{ q.name }}</span>
-                        <span class="px-2 py-0.5 rounded text-xs font-medium {% if q.query_type == 'terceros' %}bg-blue-100 text-blue-700{% else %}bg-purple-100 text-purple-700{% endif %}">
-                            {{ q.query_type }}
-                        </span>
+                <div class="p-3 rounded-lg border border-gray-200 hover:border-blue-300">
+                    <div onclick="editQuery({{ q.id }}, '{{ q.name }}', '{{ q.query_type }}', `{{ q.query_text|e }}`, `{{ q.description|e }}`)" class="cursor-pointer">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-sm text-gray-800">{{ q.name }}</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium {% if q.query_type == 'terceros' %}bg-blue-100 text-blue-700{% else %}bg-purple-100 text-purple-700{% endif %}">
+                                {{ q.query_type }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1 truncate">{{ q.description or 'Sin descripción' }}</p>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1 truncate">{{ q.description or 'Sin descripción' }}</p>
+                    <button onclick="ejecutarTest(this, {{ q.id }})" class="mt-2 text-xs text-green-600 hover:text-green-800">
+                        <i class="fas fa-play mr-1"></i> Probar
+                    </button>
                 </div>
                 {% endfor %}
             </div>
@@ -87,7 +91,7 @@
     </div>
 </div>
 
-<script>
+    <script>
 function editQuery(id, name, type, text, desc) {
     document.getElementById('query_id').value = id;
     document.getElementById('q_name').value = name;
@@ -105,6 +109,44 @@ function cancelEdit() {
     document.getElementById('q_desc').value = '';
     document.getElementById('btn-cancel').classList.add('hidden');
     document.querySelector('form').action = '/queries/create';
+}
+
+async function ejecutarTest(btn, queryId) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Probando...';
+
+    try {
+        const form = new FormData();
+        form.append('query_id', queryId);
+        const resp = await fetch('/queries/test', { method: 'POST', body: form });
+        const data = await resp.json();
+
+        if (data.error) {
+            showToast(data.error, 'error');
+            return;
+        }
+
+        let html = '<table class="w-full text-xs border-collapse"><thead><tr class="bg-gray-100">';
+        data.columns.forEach(c => { html += '<th class="p-2 border text-left font-semibold">' + c + '</th>'; });
+        html += '</tr></thead><tbody>';
+        data.rows.forEach(r => {
+            html += '<tr class="hover:bg-gray-50">';
+            data.columns.forEach(c => { html += '<td class="p-2 border">' + (r[c] ?? '') + '</td>'; });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '<p class="text-xs text-gray-500 mt-2">Total: ' + data.total + ' registros (mostrando ' + data.rows.length + ')</p>';
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+        modal.innerHTML = '<div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-auto p-6"><div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-lg">Resultado</h3><button onclick="this.closest(\'.fixed\').remove()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button></div>' + html + '</div>';
+        document.body.appendChild(modal);
+    } catch(e) {
+        showToast('Error: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play mr-1"></i> Probar';
+    }
 }
 </script>
 {% endblock %}
