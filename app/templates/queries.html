@@ -123,7 +123,12 @@
         <div class="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col min-h-0">
             <div class="px-4 py-2 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
                 <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resultados</span>
-                <span id="result-info" class="text-xs text-gray-400"></span>
+                <div class="flex items-center gap-3">
+                    <span id="result-info" class="text-xs text-gray-400"></span>
+                    <button id="btn-download" onclick="descargarJSON()" class="hidden items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg">
+                        <i class="fas fa-download"></i> JSON
+                    </button>
+                </div>
             </div>
             <div id="result-table" class="flex-1 overflow-auto">
                 <div class="flex flex-col items-center justify-center h-full text-gray-300 select-none">
@@ -164,7 +169,7 @@
 </div>
 
 <script>
-let editor, esquema = [], editandoId = null;
+let editor, esquema = [], editandoId = null, ultimosRows = [];
 
 // ── INIT CODEMIRROR ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -365,6 +370,8 @@ async function ejecutar() {
         });
         html += '</tbody></table>';
         resultDiv.innerHTML = html;
+        ultimosRows = data.rows;
+        document.getElementById('btn-download').classList.replace('hidden', 'flex');
 
         const shown = Math.min(data.total, 200);
         const trunc = data.total > 200 ? ` <span class="text-yellow-600 font-medium">(truncado a 200)</span>` : '';
@@ -384,6 +391,18 @@ function limpiar() {
     document.getElementById('result-table').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-300 select-none"><i class="fas fa-table text-4xl mb-3"></i><p class="text-sm">Ejecutá una consulta para ver resultados</p></div>';
     document.getElementById('result-info').textContent = '';
     document.getElementById('status-bar').innerHTML = '';
+    document.getElementById('btn-download').classList.replace('flex', 'hidden');
+    ultimosRows = [];
+}
+
+function descargarJSON() {
+    if (!ultimosRows.length) return;
+    const blob = new Blob([JSON.stringify(ultimosRows, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `consulta_${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
 
 // ── GUARDAR / EDITAR ──────────────────────────────────────────────────
